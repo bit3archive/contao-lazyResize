@@ -56,6 +56,23 @@ if (defined('LAZY_RESIZE')) {
 }
 ```
 
+How to temporarily disable lazy resize
+--------------------------------------
+
+If you want to disable lazy resize temporarily, just change the flag `$GLOBALS['lazyResize']` to `false` or `true`.
+
+```php
+<?php
+// disable lazy resize
+$GLOBALS['lazyResize'] = false;
+
+// output some images, using Controller::getImage
+
+// reenable lazy resize
+$GLOBALS['lazyResize'] = true;
+?>
+```
+
 Known issues
 ------------
 
