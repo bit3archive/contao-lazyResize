@@ -27,7 +27,7 @@
  * PHP version 5
  * @copyright  InfinitySoft 2012
  * @author     Tristan Lins <tristan.lins@infinitysoft.de>
- * @package    Avisota
+ * @package    lazyResize
  * @license    LGPL
  * @filesource
  */
