@@ -45,6 +45,70 @@ class LazyResize extends PageError404
 		return self::$objInstance;
 	}
 
+	protected function calculateSize($width, $height, $imageWidth, $imageHeight, $mode)
+	{
+		$intWidth = $width;
+		$intHeight = $height;
+
+		// Mode-specific changes
+		if ($intWidth && $intHeight)
+		{
+			switch ($mode)
+			{
+				case 'proportional':
+					if ($imageWidth >= $imageHeight)
+					{
+						unset($height, $intHeight);
+					}
+					else
+					{
+						unset($width, $intWidth);
+					}
+					break;
+
+				case 'box':
+					if (ceil($imageHeight * $width / $imageWidth) <= $intHeight)
+					{
+						unset($height, $intHeight);
+					}
+					else
+					{
+						unset($width, $intWidth);
+					}
+					break;
+			}
+		}
+
+		// Calculate the image size
+		if ($intWidth && $intHeight)
+		{
+			if (($intWidth * $imageHeight) != ($intHeight * $imageWidth))
+			{
+				$intWidth = ceil($imageWidth * $height / $imageHeight);
+
+				if ($intWidth < $width)
+				{
+					$intWidth = $width;
+					$intHeight = ceil($imageHeight * $width / $imageWidth);
+				}
+			}
+		}
+
+		// Calculate the height if only the width is given
+		elseif ($intWidth)
+		{
+			$intHeight = ceil($imageHeight * $width / $imageWidth);
+		}
+
+		// Calculate the width if only the height is given
+		elseif ($intHeight)
+		{
+			$intWidth = ceil($imageWidth * $height / $imageHeight);
+		}
+
+		return array($width, $height, $intWidth, $intHeight);
+	}
+
 	public function hookGetImage($image, $width, $height, $mode, $strCacheName, $objFile, $target)
 	{
 		if (!isset($GLOBALS['lazyResize']) || !$GLOBALS['lazyResize'] || !empty($target)) {
@@ -63,64 +127,10 @@ class LazyResize extends PageError404
 			return $strCacheName;
 		}
 
-		$intWidth = $width;
-		$intHeight = $height;
-
-		// Mode-specific changes
-		if ($intWidth && $intHeight)
-		{
-			switch ($mode)
-			{
-				case 'proportional':
-					if ($objFile->width >= $objFile->height)
-					{
-						unset($height, $intHeight);
-					}
-					else
-					{
-						unset($width, $intWidth);
-					}
-					break;
-
-				case 'box':
-					if (ceil($objFile->height * $width / $objFile->width) <= $intHeight)
-					{
-						unset($height, $intHeight);
-					}
-					else
-					{
-						unset($width, $intWidth);
-					}
-					break;
-			}
-		}
-
-		// Calculate the image size
-		if ($intWidth && $intHeight)
-		{
-			if (($intWidth * $objFile->height) != ($intHeight * $objFile->width))
-			{
-				$intWidth = ceil($objFile->width * $height / $objFile->height);
-
-				if ($intWidth < $width)
-				{
-					$intWidth = $width;
-					$intHeight = ceil($objFile->height * $width / $objFile->width);
-				}
-			}
-		}
-
-		// Calculate the height if only the width is given
-		elseif ($intWidth)
-		{
-			$intHeight = ceil($objFile->height * $width / $objFile->width);
-		}
-
-		// Calculate the width if only the height is given
-		elseif ($intHeight)
-		{
-			$intWidth = ceil($objFile->width * $height / $objFile->height);
-		}
+		list($width, $height, $intWidth, $intHeight) = $this->calculateSize(
+			$width, $height,
+			$objFile->width, $objFile->height,
+			$mode);
 
 		$resImage = imagecreate($intWidth, $intHeight);
 		$resWhite = imagecolorallocate($resImage, 255, 255, 255);
@@ -178,6 +188,27 @@ class LazyResize extends PageError404
 		return $strCacheName;
 	}
 
+	public function hookGeneratePage(Database_Result $objPage, Database_Result $objLayout, PageRegular $objPageRegular)
+	{
+		if (!$GLOBALS['TL_CONFIG']['lazyResizeAdaptiveNoAutoDetect']) {
+			$strScript = '';
+			if ($GLOBALS['TL_CONFIG']['lazyResizeAdaptiveResolution']) {
+				$strScript .= sprintf('d.cookie="%s="+Math.max(s.width,s.height)+";path=%s";',
+					$GLOBALS['TL_CONFIG']['lazyResizeResolutionCookie'],
+					TL_PATH);
+			}
+			if ($GLOBALS['TL_CONFIG']['lazyResizeAdaptivePixelRatio']) {
+				$strScript .= 'var r = ("devicePixelRatio" in w ? devicePixelRatio : 1);';
+				$strScript .= sprintf('if(r>1) d.cookie="%s="+r+\';path=%s\';',
+					$GLOBALS['TL_CONFIG']['lazyResizePixelRatioCookie'],
+					TL_PATH);
+			}
+			if ($strScript) {
+				$GLOBALS['TL_HEAD']['lazyResize'] = '<script' . (($objPage->outputFormat == 'xhtml') ? ' type="text/javascript"' : '') . '>(function(d,s){' . $strScript . '})(document,screen);</script>';
+			}
+		}
+	}
+
 	public function processResize()
 	{
 		/**
@@ -185,10 +216,46 @@ class LazyResize extends PageError404
 		 */
 		$GLOBALS['lazyResize'] = false;
 
+		if ($GLOBALS['TL_CONFIG']['lazyResizeAdaptivePixelRatio'] && $this->Input->cookie($GLOBALS['TL_CONFIG']['lazyResizePixelRatioCookie'])) {
+			$intPixelRatio = round(intval($this->Input->cookie($GLOBALS['TL_CONFIG']['lazyResizePixelRatioCookie'])), 1);
+			// limit pixel ratio to range 1<=x<=3
+			if ($intPixelRatio < 1 || $intPixelRatio > 3) {
+				header('HTTP/1.1 400 Bad Request');
+				die('Bad Request');
+			}
+		}
+		else {
+			$intPixelRatio = false;
+		}
+
+		if ($GLOBALS['TL_CONFIG']['lazyResizeAdaptiveResolution']) {
+			// resolution can only be int
+			$intResolution = intval($this->Input->cookie($GLOBALS['TL_CONFIG']['lazyResizeResolutionCookie']));
+		}
+		else {
+			$intResolution = false;
+		}
+
+		// Request filename
 		$strRequestUri = urldecode(urldecode($this->Environment->requestUri));
+
+		// Dummy image filename
 		$strDummy = 'system/images/' . basename($strRequestUri);
+
+		// Meta filename
 		$strMeta  = $strDummy . '.meta';
-		$strImage = 'system/images/_' . basename($strRequestUri);
+
+		// Target image filename
+		$strImage = '_' . basename($strRequestUri);
+		// Add pixel ratio to image name
+		if ($intPixelRatio) {
+			$strImage = '_pixelRatio' . $intPixelRatio . $strImage;
+		}
+		// Add resolution to image name
+		if ($intResolution) {
+			$strImage = '_resolution' . $intResolution . $strImage;
+		}
+		$strImage = 'system/images/' . $strImage;
 
 		if (file_exists(TL_ROOT . '/' . $strDummy) && file_exists(TL_ROOT . '/' . $strMeta)) {
 			$objMeta = new File($strMeta);
@@ -203,11 +270,42 @@ class LazyResize extends PageError404
 
 			// load meta informations
 			$objMetaInformation = json_decode($objMeta->getContent());
-			$this->getImage($objMetaInformation->src, $objMetaInformation->width, $objMetaInformation->height, $objMetaInformation->mode, $strImage);
 
-			flock($objMeta->handle, LOCK_UN);
-			$objMeta->close();
-			$this->reload();
+			if (file_exists(TL_ROOT . '/' . $objMetaInformation->src)) {
+				// The source image
+				$objSource = new File($objMetaInformation->src);
+
+				// handle pixelRatio and resolution
+				if ($intPixelRatio) {
+					$objMetaInformation->width += $intPixelRatio;
+					$objMetaInformation->height += $intPixelRatio;
+				}
+				if ($intResolution) {
+					// calculate target size, depending on mode
+					list($width, $height, $intWidth, $intHeight) = $this->calculateSize(
+						$objMetaInformation->width, $objMetaInformation->height,
+						$objSource->width, $objSource->height,
+						$objMetaInformation->mode);
+
+					if ($intWidth > $intResolution) {
+						$r = $intHeight / $intWidth;
+						$objMetaInformation->width  = $intWidth  = $intResolution;
+						$objMetaInformation->height = $intHeight = $intWidth * $r;
+					}
+				}
+
+				// generate the image
+				$this->getImage($objMetaInformation->src, $objMetaInformation->width, $objMetaInformation->height, $objMetaInformation->mode, $strImage);
+
+				flock($objMeta->handle, LOCK_UN);
+				$objMeta->close();
+				$this->reload();
+			}
+			// source file not found
+			else {
+				flock($objMeta->handle, LOCK_UN);
+				$objMeta->close();
+			}
 		}
 
 		/*

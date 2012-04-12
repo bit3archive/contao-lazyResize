@@ -15,6 +15,17 @@ Put this into your .htaccess, just after RewriteBase or your www-Rewrite
   RewriteCond %{REQUEST_FILENAME} system/images/([^_].*\.(png|jpe?g|gif))$
   RewriteRule .* system/images/_%1
 
+  # Rewrite pixel ratio changes
+  RewriteCond %{REQUEST_FILENAME} !pixelRatio
+  RewriteCond %{HTTP_COOKIE} lazyResizePixelRatio=(\d+) [NC]
+  RewriteRule system/images/(.*) system/images/_pixelRatio%1$1
+
+  # Rewrite resolution changes
+  RewriteCond %{REQUEST_FILENAME} !resolution
+  RewriteCond %{HTTP_COOKIE} lazyResizeResolution=(\d+) [NC]
+  RewriteRule system/images/(.*) system/images/_resolution%1$1
+
+  # Generate image if not exists
   RewriteCond %{REQUEST_FILENAME} system/images/
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteRule (.*)/.* system/modules/lazyResize/resize.php [L]

@@ -41,6 +41,14 @@ if (!isset($GLOBALS['lazyResize'])) {
 }
 
 /**
+ * Settings
+ */
+$GLOBALS['TL_CONFIG']['lazyResizeAdaptiveResolution'] = true;
+$GLOBALS['TL_CONFIG']['lazyResizeResolutionCookie']   = 'lazyResizeResolution';
+$GLOBALS['TL_CONFIG']['lazyResizeAdaptivePixelRatio'] = true;
+$GLOBALS['TL_CONFIG']['lazyResizePixelRatioCookie']   = 'lazyResizePixelRatio';
+
+/**
  * HOOKs
  */
 if (is_array($GLOBALS['TL_HOOKS']['getImage'])) {
@@ -49,3 +57,4 @@ if (is_array($GLOBALS['TL_HOOKS']['getImage'])) {
 else {
 	$GLOBALS['TL_HOOKS']['getImage'] = array(array('LazyResize', 'hookGetImage'));
 }
+$GLOBALS['TL_HOOKS']['generatePage'][] = array('LazyResize', 'hookGeneratePage');
