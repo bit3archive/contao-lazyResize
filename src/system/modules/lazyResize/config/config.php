@@ -49,6 +49,21 @@ $GLOBALS['TL_CONFIG']['lazyResizeAdaptivePixelRatio'] = true;
 $GLOBALS['TL_CONFIG']['lazyResizePixelRatioCookie']   = 'lazyResizePixelRatio';
 
 /**
+ * Maintenance
+ */
+$pos = array_search('PurgeData', $GLOBALS['TL_MAINTENANCE']);
+if ($pos === false) {
+	$GLOBALS['TL_MAINTENANCE'][] = 'PurgeImages';
+}
+else {
+	$GLOBALS['TL_MAINTENANCE'] = array_merge(
+		array_slice($GLOBALS['TL_MAINTENANCE'], 0, $pos + 1),
+		array('PurgeImages'),
+		array_slice($GLOBALS['TL_MAINTENANCE'], $pos + 1)
+	);
+}
+
+/**
  * HOOKs
  */
 if (is_array($GLOBALS['TL_HOOKS']['getImage'])) {

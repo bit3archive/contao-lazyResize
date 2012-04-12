@@ -1,0 +1,23 @@
+
+<div id="tl_maintenance_cache" class="maintenance_<?php echo $this->isActive ? 'active' : 'inactive'; ?>">
+
+	<h2 class="sub_headline"><?php echo $GLOBALS['TL_LANG']['tl_maintenance']['purgeImages']; ?></h2>
+
+	<?php if ($this->cacheMessage): ?>
+		<div class="tl_message">
+			<?php echo $this->cacheMessage; ?>
+		</div>
+	<?php endif; ?>
+
+	<form action="<?php echo $this->action; ?>" class="tl_form" method="post">
+		<div class="tl_tbox">
+			<input type="hidden" name="FORM_SUBMIT" value="tl_purge_images">
+			<input type="hidden" name="REQUEST_TOKEN" value="<?php echo REQUEST_TOKEN; ?>">
+		</div>
+		<div class="tl_submit_container">
+			<input type="submit" name="purge_adaptive_images" class="tl_submit" value="<?php echo $GLOBALS['TL_LANG']['tl_maintenance']['purgeAdaptiveImages']; ?>">
+			<input type="submit" name="purge_all_images" class="tl_submit" value="<?php echo $GLOBALS['TL_LANG']['tl_maintenance']['purgeAllImages']; ?>">
+		</div>
+	</form>
+
+</div>
