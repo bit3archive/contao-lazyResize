@@ -322,8 +322,8 @@ class LazyResize extends PageError404
 
 				// handle pixelRatio and resolution
 				if ($intPixelRatio) {
-					$objMetaInformation->width += $intPixelRatio;
-					$objMetaInformation->height += $intPixelRatio;
+					$objMetaInformation->width *= $intPixelRatio;
+					$objMetaInformation->height *= $intPixelRatio;
 				}
 				if ($intResolution) {
 					// calculate target size, depending on mode
