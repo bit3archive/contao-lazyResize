@@ -91,6 +91,9 @@ class LazyResize extends PageError404
 						unset($width, $intWidth);
 					}
 					break;
+
+				default:
+					return array($width, $height, $intWidth, $intHeight);
 			}
 		}
 
