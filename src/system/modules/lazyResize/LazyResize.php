@@ -35,8 +35,15 @@
 
 class LazyResize extends PageError404
 {
+	/**
+	 * @var LazyResize
+	 */
 	protected static $objInstance = null;
 
+	/**
+	 * @static
+	 * @return LazyResize
+	 */
 	public static function getInstance()
 	{
 		if (self::$objInstance === null) {
@@ -45,6 +52,14 @@ class LazyResize extends PageError404
 		return self::$objInstance;
 	}
 
+	/**
+	 * @param int|string $width
+	 * @param int|string $height
+	 * @param int $imageWidth
+	 * @param int $imageHeight
+	 * @param string $mode
+	 * @return array
+	 */
 	protected function calculateSize($width, $height, $imageWidth, $imageHeight, $mode)
 	{
 		$intWidth = $width;
@@ -106,10 +121,26 @@ class LazyResize extends PageError404
 			$intWidth = ceil($imageWidth * $height / $imageHeight);
 		}
 
+		else
+		{
+			$intWidth = $imageWidth;
+			$intHeight = $imageHeight;
+		}
+
 		return array($width, $height, $intWidth, $intHeight);
 	}
 
-	public function hookGetImage($image, $width, $height, $mode, $strCacheName, $objFile, $target)
+	/**
+	 * @param string $image
+	 * @param int|string $width
+	 * @param int|string $height
+	 * @param string $mode
+	 * @param string $strCacheName
+	 * @param File $objFile
+	 * @param string $target
+	 * @return bool|string
+	 */
+	public function hookGetImage($image, $width, $height, $mode, $strCacheName, File $objFile, $target)
 	{
 		if (!isset($GLOBALS['lazyResize']) || !$GLOBALS['lazyResize'] || !empty($target)) {
 			return false;
@@ -188,6 +219,11 @@ class LazyResize extends PageError404
 		return $strCacheName;
 	}
 
+	/**
+	 * @param Database_Result $objPage
+	 * @param Database_Result $objLayout
+	 * @param PageRegular $objPageRegular
+	 */
 	public function hookGeneratePage(Database_Result $objPage, Database_Result $objLayout, PageRegular $objPageRegular)
 	{
 		if (!$GLOBALS['TL_CONFIG']['lazyResizeAdaptiveNoAutoDetect']) {
@@ -212,6 +248,9 @@ class LazyResize extends PageError404
 		}
 	}
 
+	/**
+	 * Process the request.
+	 */
 	public function processResize()
 	{
 		/**
