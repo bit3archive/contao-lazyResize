@@ -232,13 +232,13 @@ class LazyResize extends PageError404
 		if (!$GLOBALS['TL_CONFIG']['lazyResizeAdaptiveNoAutoDetect']) {
 			$strScript = '';
 			if ($GLOBALS['TL_CONFIG']['lazyResizeAdaptiveResolution']) {
-				$strScript .= sprintf('if (!d.cookie.test(/%s=\d+/)) d.cookie="%s="+Math.max(s.width,s.height)+";path=%s";',
+				$strScript .= sprintf('if (!/%s=\d+/.exec(d.cookie)) d.cookie="%s="+Math.max(s.width,s.height)+";path=%s";',
 					$GLOBALS['TL_CONFIG']['lazyResizeResolutionCookie'],
 					$GLOBALS['TL_CONFIG']['lazyResizeResolutionCookie'],
 					TL_PATH);
 			}
 			if ($GLOBALS['TL_CONFIG']['lazyResizeAdaptivePixelRatio']) {
-				$strScript .= sprintf('if (!d.cookie.test(/%s=\d+/)) { var r = ("devicePixelRatio" in w ? devicePixelRatio : 1);',
+				$strScript .= sprintf('if (!/%s=\d+/.exec(d.cookie)) { var r = ("devicePixelRatio" in w ? devicePixelRatio : 1);',
 					$GLOBALS['TL_CONFIG']['lazyResizePixelRatioCookie']);
 				$strScript .= sprintf('if(r>1) d.cookie="%s="+r+\';path=%s\';',
 					$GLOBALS['TL_CONFIG']['lazyResizePixelRatioCookie'],
