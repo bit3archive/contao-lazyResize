@@ -342,6 +342,13 @@ class LazyResize extends PageError404
 				// generate the image
 				$this->getImage($objMetaInformation->src, $objMetaInformation->width, $objMetaInformation->height, $objMetaInformation->mode, $strImage);
 
+				// copy original if file was not copied within getImage,
+				// see https://github.com/contao/core/pull/4166
+				if (!file_exists(TL_ROOT . '/' . $strImage)) {
+					$this->import('Files');
+					$this->Files->copy($objMetaInformation->src, $strImage);
+				}
+
 				flock($objMeta->handle, LOCK_UN);
 				$objMeta->close();
 				$this->reload();
