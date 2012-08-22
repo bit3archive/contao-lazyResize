@@ -52,7 +52,7 @@ $GLOBALS['TL_CONFIG']['lazyResizePixelRatioCookie']   = 'lazyResizePixelRatio';
  * Maintenance
  */
 $pos = array_search('PurgeData', $GLOBALS['TL_MAINTENANCE']);
-if ($pos === false) {
+if ($pos === null || $pos === false) {
 	$GLOBALS['TL_MAINTENANCE'][] = 'PurgeImages';
 }
 else {
