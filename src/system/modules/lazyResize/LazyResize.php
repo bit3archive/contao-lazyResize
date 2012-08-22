@@ -35,8 +35,15 @@
 
 class LazyResize extends PageError404
 {
+	/**
+	 * @var LazyResize
+	 */
 	protected static $objInstance = null;
 
+	/**
+	 * @static
+	 * @return LazyResize
+	 */
 	public static function getInstance()
 	{
 		if (self::$objInstance === null) {
@@ -45,6 +52,14 @@ class LazyResize extends PageError404
 		return self::$objInstance;
 	}
 
+	/**
+	 * @param int|string $width
+	 * @param int|string $height
+	 * @param int $imageWidth
+	 * @param int $imageHeight
+	 * @param string $mode
+	 * @return array
+	 */
 	protected function calculateSize($width, $height, $imageWidth, $imageHeight, $mode)
 	{
 		$intWidth = $width;
@@ -76,6 +91,9 @@ class LazyResize extends PageError404
 						unset($width, $intWidth);
 					}
 					break;
+
+				default:
+					return array($width, $height, $intWidth, $intHeight);
 			}
 		}
 
@@ -106,10 +124,26 @@ class LazyResize extends PageError404
 			$intWidth = ceil($imageWidth * $height / $imageHeight);
 		}
 
+		else
+		{
+			$intWidth = $imageWidth;
+			$intHeight = $imageHeight;
+		}
+
 		return array($width, $height, $intWidth, $intHeight);
 	}
 
-	public function hookGetImage($image, $width, $height, $mode, $strCacheName, $objFile, $target)
+	/**
+	 * @param string $image
+	 * @param int|string $width
+	 * @param int|string $height
+	 * @param string $mode
+	 * @param string $strCacheName
+	 * @param File $objFile
+	 * @param string $target
+	 * @return bool|string
+	 */
+	public function hookGetImage($image, $width, $height, $mode, $strCacheName, File $objFile, $target)
 	{
 		if (!isset($GLOBALS['lazyResize']) || !$GLOBALS['lazyResize'] || !empty($target)) {
 			return false;
@@ -188,18 +222,23 @@ class LazyResize extends PageError404
 		return $strCacheName;
 	}
 
+	/**
+	 * @param Database_Result $objPage
+	 * @param Database_Result $objLayout
+	 * @param PageRegular $objPageRegular
+	 */
 	public function hookGeneratePage(Database_Result $objPage, Database_Result $objLayout, PageRegular $objPageRegular)
 	{
 		if (!$GLOBALS['TL_CONFIG']['lazyResizeAdaptiveNoAutoDetect']) {
 			$strScript = '';
 			if ($GLOBALS['TL_CONFIG']['lazyResizeAdaptiveResolution']) {
-				$strScript .= sprintf('if (!d.cookie.test(/%s=\d+/)) d.cookie="%s="+Math.max(s.width,s.height)+";path=%s";',
+				$strScript .= sprintf('if (!/%s=\d+/.exec(d.cookie)) d.cookie="%s="+Math.max(s.width,s.height)+";path=%s";',
 					$GLOBALS['TL_CONFIG']['lazyResizeResolutionCookie'],
 					$GLOBALS['TL_CONFIG']['lazyResizeResolutionCookie'],
 					TL_PATH);
 			}
 			if ($GLOBALS['TL_CONFIG']['lazyResizeAdaptivePixelRatio']) {
-				$strScript .= sprintf('if (!d.cookie.test(/%s=\d+/)) { var r = ("devicePixelRatio" in w ? devicePixelRatio : 1);',
+				$strScript .= sprintf('if (!/%s=\d+/.exec(d.cookie)) { var r = ("devicePixelRatio" in w ? devicePixelRatio : 1);',
 					$GLOBALS['TL_CONFIG']['lazyResizePixelRatioCookie']);
 				$strScript .= sprintf('if(r>1) d.cookie="%s="+r+\';path=%s\';',
 					$GLOBALS['TL_CONFIG']['lazyResizePixelRatioCookie'],
@@ -212,6 +251,9 @@ class LazyResize extends PageError404
 		}
 	}
 
+	/**
+	 * Process the request.
+	 */
 	public function processResize()
 	{
 		/**
@@ -280,8 +322,8 @@ class LazyResize extends PageError404
 
 				// handle pixelRatio and resolution
 				if ($intPixelRatio) {
-					$objMetaInformation->width += $intPixelRatio;
-					$objMetaInformation->height += $intPixelRatio;
+					$objMetaInformation->width *= $intPixelRatio;
+					$objMetaInformation->height *= $intPixelRatio;
 				}
 				if ($intResolution) {
 					// calculate target size, depending on mode
@@ -299,6 +341,13 @@ class LazyResize extends PageError404
 
 				// generate the image
 				$this->getImage($objMetaInformation->src, $objMetaInformation->width, $objMetaInformation->height, $objMetaInformation->mode, $strImage);
+
+				// copy original if file was not copied within getImage,
+				// see https://github.com/contao/core/pull/4166
+				if (!file_exists(TL_ROOT . '/' . $strImage)) {
+					$this->import('Files');
+					$this->Files->copy($objMetaInformation->src, $strImage);
+				}
 
 				flock($objMeta->handle, LOCK_UN);
 				$objMeta->close();

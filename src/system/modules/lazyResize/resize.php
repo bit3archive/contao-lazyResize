@@ -37,6 +37,7 @@
  * Initialize contao
  */
 require('../../initialize.php');
+require(dirname(__FILE__) . '/LazyResize.php');
 
 /**
  * Define this is a lazy resize
